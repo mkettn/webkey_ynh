@@ -1,0 +1,28 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Updating app sources"
+cp -a ../pyproject.toml "$install_dir/"
+cp -a ../src "$install_dir/"
+cp -a ../DESIGN.md "$install_dir/"
+mkdir -p "$data_dir/.well-known/openpgpkey/$domain/hu"
+touch "$data_dir/.well-known/openpgpkey/$domain/policy"
+
+ynh_script_progression "Updating python dependencies"
+ynh_exec_as_app "$install_dir/venv/bin/pip" install --upgrade pip
+ynh_exec_as_app "$install_dir/venv/bin/pip" install "$install_dir"
+
+ynh_script_progression "Refreshing configuration"
+ynh_config_add --template="app.env" --destination="$install_dir/app.env"
+ynh_config_add_systemd
+ynh_config_add_nginx
+
+chown -R "$app:$app" "$install_dir" "$data_dir"
+chmod -R u=rwX,g=rX,o= "$install_dir" "$data_dir"
+
+ynh_script_progression "Restarting service"
+ynh_systemctl --service="$app" --action=restart
+
+ynh_script_progression "Upgrade of $app completed"

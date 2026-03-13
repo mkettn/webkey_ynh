@@ -1,6 +1,6 @@
 # webkey_ynh - Design Decisions
 
-This document captures the design decisions agreed so far for a YunoHost app that provides a Web Key Directory (WKD) service plus a user UI for key management.
+This document captures the design decisions agreed so far for a Web Key Directory (WKD) service packaged for YunoHost, with a user UI for key management.
 
 ## Goal
 
@@ -13,6 +13,26 @@ This document captures the design decisions agreed so far for a YunoHost app tha
 - One app instance manages one WKD domain context.
 - The app supports multiple domains by using YunoHost multi-instance installs.
 - This project targets WKD serving and key management (not a general keyserver).
+
+## Coupling Strategy
+
+- The app core must remain YunoHost-agnostic.
+- YunoHost-specific behavior must live in packaging and adapter layers.
+- The service should be runnable outside YunoHost with a different identity provider.
+- YunoHost acts as deployment/integration glue, not as a hard runtime dependency in core logic.
+
+## Architecture Boundary
+
+- Core layer (`src/core/`) contains WKD logic only:
+  - key parsing/validation,
+  - UID extraction and filtering,
+  - WKD hash/path generation,
+  - publication and storage workflows.
+- Identity adapter layer (`src/adapters/`) provides an interface for:
+  - current authenticated user identity,
+  - owned email resolution for that user.
+- YunoHost adapter implements that interface using SSO headers and YunoHost user data.
+- A non-YunoHost adapter (tests/dev) is provided to keep core tests independent.
 
 ## YunoHost Deployment Model
 
@@ -34,6 +54,7 @@ This document captures the design decisions agreed so far for a YunoHost app tha
 - Human management surface (UI/API): authenticated.
 - Machine lookup surface (WKD): public, unauthenticated.
 - WKD paths must never require login or HTTP auth challenge.
+- Authentication/ownership source is pluggable via adapter, not hardcoded into WKD core.
 
 ## Ownership and Authorization Rules
 
@@ -42,6 +63,11 @@ This document captures the design decisions agreed so far for a YunoHost app tha
 - One active key per YunoHost account per app instance.
 - A key may contain multiple UID emails.
 - Extra UID emails not owned by the user are allowed, but ignored for publishing.
+
+### Identity Provider Note
+
+- In the packaged YunoHost deployment, account ownership is resolved from YunoHost users/aliases.
+- In non-YunoHost deployments, ownership can be provided by another adapter implementing the same interface.
 
 ## Domain Filtering Rules
 
@@ -78,7 +104,7 @@ This document captures the design decisions agreed so far for a YunoHost app tha
 ## Storage Model (v1)
 
 - Filesystem-backed storage with per-instance metadata.
-- Metadata keyed by YunoHost username (single key per account in that instance).
+- Metadata keyed by generic account identifier from the active identity adapter (single key per account in that instance).
 - Track fingerprint, key UID list, timestamps, and published WKD hashes.
 
 ## App Packaging Direction
@@ -88,6 +114,7 @@ This document captures the design decisions agreed so far for a YunoHost app tha
 - Systemd-managed backend service (planned stack: Python/Flask + gunicorn).
 - Install script checks for `/.well-known/openpgpkey` conflicts on chosen domain.
 - No subpath-based WKD install model.
+- YunoHost package is responsible for wiring the YunoHost identity adapter and runtime env.
 
 ## Testing Strategy
 

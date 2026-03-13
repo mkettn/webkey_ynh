@@ -1,0 +1,16 @@
+[Unit]
+Description=WebKey WKD service
+After=network.target
+
+[Service]
+Type=simple
+User=__APP__
+Group=__APP__
+WorkingDirectory=__INSTALL_DIR__
+EnvironmentFile=__INSTALL_DIR__/app.env
+ExecStart=__INSTALL_DIR__/venv/bin/gunicorn --bind 127.0.0.1:__PORT__ webkey.wsgi:app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

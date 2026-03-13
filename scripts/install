@@ -1,0 +1,43 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Validating domain routing"
+
+if [[ "$domain" != openpgpkey.* ]]; then
+    ynh_die "Domain must start with openpgpkey. for WKD advanced mode"
+fi
+
+ensure_webkey_path_free
+
+ynh_script_progression "Installing app files"
+cp -a ../pyproject.toml "$install_dir/"
+cp -a ../src "$install_dir/"
+cp -a ../DESIGN.md "$install_dir/"
+mkdir -p "$data_dir/.well-known/openpgpkey/$domain/hu"
+touch "$data_dir/.well-known/openpgpkey/$domain/policy"
+
+ynh_script_progression "Creating python virtualenv"
+python3 -m venv "$install_dir/venv"
+ynh_exec_as_app "$install_dir/venv/bin/pip" install --upgrade pip
+ynh_exec_as_app "$install_dir/venv/bin/pip" install "$install_dir"
+
+ynh_script_progression "Configuring runtime"
+ynh_config_add --template="app.env" --destination="$install_dir/app.env"
+chown "$app:$app" "$install_dir/app.env"
+chmod 640 "$install_dir/app.env"
+
+ynh_config_add_systemd
+ynh_config_add_nginx
+
+ynh_script_progression "Setting permissions"
+chown -R "$app:$app" "$install_dir"
+chmod -R u=rwX,g=rX,o= "$install_dir"
+chown -R "$app:$app" "$data_dir"
+chmod -R u=rwX,g=rX,o= "$data_dir"
+
+ynh_script_progression "Starting service"
+ynh_systemctl --service="$app" --action=start
+
+ynh_script_progression "Installation of $app completed"

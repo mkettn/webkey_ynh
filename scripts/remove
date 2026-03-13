@@ -1,0 +1,16 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Stopping service"
+ynh_systemctl --service="$app" --action=stop || true
+
+ynh_script_progression "Removing systemd and nginx config"
+ynh_config_remove_systemd
+ynh_config_remove_nginx
+
+ynh_script_progression "Removing app files"
+ynh_safe_rm "$install_dir"
+
+ynh_script_progression "Removal of $app completed"

@@ -1,0 +1,56 @@
+packaging_format = 2
+
+id = "webkey"
+name = "Web Key Directory"
+description.en = "Self-hosted WKD service with user key management"
+
+version = "0.1.0~ynh1"
+maintainers = ["mke"]
+
+[upstream]
+license = "MIT"
+website = "https://github.com/mkettn/webkey_ynh"
+code = "https://github.com/mkettn/webkey_ynh"
+
+[integration]
+yunohost = ">= 12.1.38"
+helpers_version = "2.1"
+architectures = "all"
+multi_instance = true
+sso = true
+ldap = false
+disk = "50M"
+ram.runtime = "100M"
+
+[install]
+    [install.domain]
+    type = "domain"
+
+    [install.init_main_permission]
+    help.en = "Only users with at least one email address can use key management."
+    type = "group"
+    default = "all_users"
+
+[resources]
+    [resources.system_user]
+
+    [resources.install_dir]
+
+    [resources.data_dir]
+
+    [resources.permissions]
+    main.url = "/"
+    main.auth_header = true
+    main.protected = true
+
+    wkd_public.url = "/.well-known/openpgpkey"
+    wkd_public.allowed = "visitors"
+    wkd_public.auth_header = false
+    wkd_public.show_tile = false
+    wkd_public.protected = true
+
+    [resources.ports]
+    main.default = 11990
+
+    [resources.apt]
+    packages = ["python3", "python3-venv"]
